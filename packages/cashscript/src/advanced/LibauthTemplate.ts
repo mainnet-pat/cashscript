@@ -22,6 +22,7 @@ import { EncodedConstructorArgument, EncodedFunctionArgument, encodeFunctionArgu
 import { Contract } from '../Contract.js';
 import { DebugResults, debugTemplate } from '../debugging.js';
 import {
+  ContractOptions,
   ContractUnlocker,
   UnlockableUtxo,
   Utxo,
@@ -44,6 +45,10 @@ import { Transaction } from '../Transaction.js';
 import { addressToLockScript } from '../utils.js';
 import { TransactionBuilder } from '../TransactionBuilder.js';
 
+export const TemplateScenarioOptions = {
+  currentBlockHeight: undefined as number | undefined,
+  currentBlockTime: undefined as number | undefined,
+};
 
 /**
  * Generates template entities for P2PKH (Pay to Public Key Hash) placeholder scripts.
@@ -197,7 +202,7 @@ export const generateTemplateScriptsP2SH = (
   const lockingScriptName = getLockScriptName(contract);
 
   return {
-    [unlockingScriptName]: generateTemplateUnlockScript(contract, abiFunction, encodedFunctionArgs, inputIndex),
+    [unlockingScriptName]: generateTemplateUnlockScript(contract, abiFunction, encodedFunctionArgs, inputIndex, contract.options),
     [lockingScriptName]: generateTemplateLockScript(contract, encodedConstructorArgs),
   };
 };
@@ -238,11 +243,12 @@ const generateTemplateUnlockScript = (
   abiFunction: AbiFunction,
   encodedFunctionArgs: EncodedFunctionArgument[],
   inputIndex: number,
+  contractOptions?: ContractOptions,
 ): WalletTemplateScriptUnlocking => {
   const scenarioIdentifier = `${contract.artifact.contractName}_${abiFunction.name}_input${inputIndex}_evaluate`;
   const functionIndex = contract.artifact.abi.findIndex((func) => func.name === abiFunction.name);
 
-  const functionIndexString = contract.artifact.abi.length > 1
+  const functionIndexString = contract.artifact.abi.length > 1 && !contractOptions?.ignoreFunctionSelector
     ? ['// function index in contract', `<function_index> // int = <${functionIndex}>`, '']
     : [];
 
@@ -283,8 +289,8 @@ export const generateTemplateScenarios = (
           ...generateTemplateScenarioParametersValues(abiFunction.inputs, encodedFunctionArgs),
           ...generateTemplateScenarioParametersValues(artifact.constructorInputs, encodedConstructorArgs),
         },
-        currentBlockHeight: 2,
-        currentBlockTime: Math.round(+new Date() / 1000),
+        currentBlockHeight: TemplateScenarioOptions.currentBlockHeight ?? 2,
+        currentBlockTime: TemplateScenarioOptions.currentBlockTime ?? Math.round(+new Date() / 1000),
         keys: {
           privateKeys: generateTemplateScenarioKeys(abiFunction.inputs, encodedFunctionArgs),
         },

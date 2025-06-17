@@ -34,6 +34,7 @@ import {
   SignatureAlgorithm,
   HashType,
   isUnlockableUtxo,
+  ContractOptions,
 } from './interfaces.js';
 import SignatureTemplate from './SignatureTemplate.js';
 import { Transaction } from './Transaction.js';
@@ -67,6 +68,7 @@ export const buildTemplate = async ({
       transaction.abiFunction,
       transaction.encodedFunctionArgs,
       contract.encodedConstructorArgs,
+      contract.options,
     ),
     scenarios: generateTemplateScenarios(
       contract,
@@ -187,10 +189,11 @@ const generateTemplateScripts = (
   abiFunction: AbiFunction,
   encodedFunctionArgs: EncodedFunctionArgument[],
   encodedConstructorArgs: EncodedConstructorArgument[],
+  contractOptions?: ContractOptions,
 ): WalletTemplate['scripts'] => {
   // definition of locking scripts and unlocking scripts with their respective bytecode
   return {
-    [artifact.contractName + '_unlock']: generateTemplateUnlockScript(artifact, abiFunction, encodedFunctionArgs),
+    [artifact.contractName + '_unlock']: generateTemplateUnlockScript(artifact, abiFunction, encodedFunctionArgs, contractOptions),
     [artifact.contractName + '_lock']: generateTemplateLockScript(artifact, addressType, encodedConstructorArgs),
   };
 };
@@ -217,10 +220,11 @@ const generateTemplateUnlockScript = (
   artifact: Artifact,
   abiFunction: AbiFunction,
   encodedFunctionArgs: EncodedFunctionArgument[],
+  contractOptions?: ContractOptions,
 ): WalletTemplateScriptUnlocking => {
   const functionIndex = artifact.abi.findIndex((func) => func.name === abiFunction.name);
 
-  const functionIndexString = artifact.abi.length > 1
+  const functionIndexString = artifact.abi.length > 1 && !contractOptions?.ignoreFunctionSelector
     ? ['// function index in contract', `<function_index> // int = <${functionIndex}>`, '']
     : [];
 

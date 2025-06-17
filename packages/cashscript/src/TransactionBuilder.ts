@@ -159,6 +159,11 @@ export class TransactionBuilder {
   }
 
   debug(): DebugResults {
+    // do not debug a pure P2PKH-spend transaction
+    if (!this.inputs.some((input) => 'contract' in input.unlocker)) {
+      return {};
+    }
+
     const contractVersions = this.inputs
       .map((input) => 'contract' in input.unlocker ? input.unlocker.contract.artifact.compiler.version : null)
       .filter((version) => version !== null);
